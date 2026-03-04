@@ -3,10 +3,25 @@
 <head>
     <meta charset="UTF-8">
     <title>Lambda HTTP Framework</title>
+    <link rel="stylesheet" href="/styles.css">
 </head>
 <body>
     <h1>Welcome to the Lambda HTTP Framework</h1>
     <p>This is a static file served by the framework.</p>
+
+    <h2>REST Services</h2>
+    <ul>
+        <li><a href="/App/hello?name=Pedro">/App/hello?name=Pedro</a></li>
+        <li><a href="/App/pi">/App/pi</a></li>
+    </ul>
+
+    <h2>Try it</h2>
+    <label for="nameInput">Enter your name:</label>
+    <input type="text" id="nameInput" placeholder="Pedro">
+    <button id="greetBtn">Greet</button>
+    <p id="result"></p>
+
+    <script src="/app.js"></script>
 </body>
 </html>
 
