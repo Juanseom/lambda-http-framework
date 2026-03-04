@@ -1,6 +1,6 @@
+edu\eci\arep\httpserver\RouteHandler.class
 edu\eci\arep\httpserver\Response.class
 edu\eci\arep\httpserver\App.class
 edu\eci\arep\httpserver\Request.class
 edu\eci\arep\httpserver\HttpServer.class
-edu\eci\arep\httpserver\RouteHandler.class
 edu\eci\arep\httpserver\LambdaFramework.class

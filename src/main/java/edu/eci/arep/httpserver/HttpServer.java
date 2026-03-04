@@ -36,13 +36,12 @@ public class HttpServer {
     }
 
     private static void handleRequest(Socket clientSocket) throws IOException {
-        PrintWriter out = new PrintWriter(clientSocket.getOutputStream(), true);
         BufferedReader in = new BufferedReader(
                 new InputStreamReader(clientSocket.getInputStream()));
+        OutputStream outStream = clientSocket.getOutputStream();
 
         String inputLine;
         String requestLine = "";
-
 
         while ((inputLine = in.readLine()) != null) {
             if (requestLine.isEmpty()) {
@@ -54,10 +53,8 @@ public class HttpServer {
             }
         }
 
-        String outputLine = "";
-
         if (!requestLine.isEmpty()) {
-            String[] parts = requestLine.split(" "); // Parse the request line: GET /App/hello?name=Pedro HTTP/1.1
+            String[] parts = requestLine.split(" ");
 
             if (parts.length >= 2) {
                 String method = parts[0];
@@ -71,38 +68,76 @@ public class HttpServer {
                 }
 
                 if (path.startsWith(APP_PREFIX)) {
-                    String servicePath = path.substring(APP_PREFIX.length());
-                    RouteHandler handler = LambdaFramework.getHandler(servicePath);
-
-                    if (handler != null) {
-                        Request req = new Request(method, servicePath, queryString);
-                        Response res = new Response();
-                        String body = handler.handle(req, res);
-
-                        outputLine = "HTTP/1.1 200 OK\r\n"
-                                + "Content-Type: text/plain\r\n"
-                                + "\r\n"
-                                + body;
-                    } else {
-                        outputLine = "HTTP/1.1 404 Not Found\r\n"
-                                + "Content-Type: text/plain\r\n"
-                                + "\r\n"
-                                + "404 Not Found";
-                    }
+                    handleRestRequest(method, path, queryString, outStream);
                 } else {
-                    outputLine = "HTTP/1.1 404 Not Found\r\n"
-                            + "Content-Type: text/plain\r\n"
-                            + "\r\n"
-                            + "404 Not Found";
+                    handleStaticFile(path, outStream);
                 }
             }
         }
 
-        out.println(outputLine);
-
-        out.close();
+        outStream.close();
         in.close();
         clientSocket.close();
+    }
+
+    private static void handleRestRequest(String method, String path, String queryString, OutputStream outStream) throws IOException {
+        String servicePath = path.substring(APP_PREFIX.length());
+        RouteHandler handler = LambdaFramework.getHandler(servicePath);
+
+        String response;
+        if (handler != null) {
+            Request req = new Request(method, servicePath, queryString);
+            Response res = new Response();
+            String body = handler.handle(req, res);
+
+            response = "HTTP/1.1 200 OK\r\n"
+                    + "Content-Type: text/plain\r\n"
+                    + "\r\n"
+                    + body;
+        } else {
+            response = "HTTP/1.1 404 Not Found\r\n"
+                    + "Content-Type: text/plain\r\n"
+                    + "\r\n"
+                    + "404 Not Found";
+        }
+        outStream.write(response.getBytes());
+    }
+
+    private static void handleStaticFile(String path, OutputStream outStream) throws IOException {
+        String staticFolder = LambdaFramework.getStaticFilesPath();
+        String filePath = staticFolder + path;
+
+        InputStream fileStream = HttpServer.class.getResourceAsStream(filePath);
+
+        if (fileStream == null) {
+            String response = "HTTP/1.1 404 Not Found\r\n"
+                    + "Content-Type: text/plain\r\n"
+                    + "\r\n"
+                    + "404 Not Found";
+            outStream.write(response.getBytes());
+            return;
+        }
+
+        String contentType = getContentType(path);
+        byte[] fileBytes = fileStream.readAllBytes();
+        fileStream.close();
+
+        String header = "HTTP/1.1 200 OK\r\n"
+                + "Content-Type: " + contentType + "\r\n"
+                + "Content-Length: " + fileBytes.length + "\r\n"
+                + "\r\n";
+        outStream.write(header.getBytes());
+        outStream.write(fileBytes);
+    }
+
+    private static String getContentType(String path) {
+        if (path.endsWith(".html")) return "text/html";
+        if (path.endsWith(".css")) return "text/css";
+        if (path.endsWith(".js")) return "application/javascript";
+        if (path.endsWith(".png")) return "image/png";
+        if (path.endsWith(".jpg") || path.endsWith(".jpeg")) return "image/jpeg";
+        if (path.endsWith(".gif")) return "image/gif";
+        return "text/plain";
     }
 }
 
